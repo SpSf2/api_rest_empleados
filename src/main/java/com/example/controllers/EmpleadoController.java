@@ -6,12 +6,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.core.io.Resource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
@@ -27,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.entities.Empleado;
 import com.example.models.FileUploadResponse;
 import com.example.services.EmpleadoService;
+import com.example.utilities.FileDownloadUtil;
 import com.example.utilities.FileUploadUtil;
 
 import jakarta.transaction.Transactional;
@@ -40,6 +44,7 @@ public class EmpleadoController {
 
     private final EmpleadoService empleadoService;
     private final FileUploadUtil fileUploadUtil;
+    private final FileDownloadUtil fileDownloadUtil;
 
    @GetMapping
     public ResponseEntity<Map<String, Object>> dameEmpleados(
@@ -171,4 +176,30 @@ public class EmpleadoController {
 
         return responseEntity;
     }
+
+    @GetMapping("/fileDownload/{fileCode}")
+    public ResponseEntity<?> downloadFile(@PathVariable String fileCode) {
+
+        Resource resource = null;
+
+        try {
+            resource = fileDownloadUtil.getFileAsResource(fileCode);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+
+        if (resource == null) {
+            return new ResponseEntity<>("Imagen del empleado no encontrada", HttpStatus.NOT_FOUND);
+        }
+
+        String contentType = "application/octet-stream";
+        String headerValue = "attachment; fileName=\"" + resource.getFilename() + "\"";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
+                .body(resource);
+    }
+
+
 }
