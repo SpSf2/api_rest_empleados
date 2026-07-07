@@ -35,30 +35,40 @@ public class EmpleadoController {
 
     private final EmpleadoService empleadoService;
 
-    @GetMapping
+   @GetMapping
     public ResponseEntity<Map<String, Object>> dameEmpleados(
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "size", required = false) Integer size) {
 
         List<Empleado> empleados = null;
         Map<String, Object> responseAsMap = new HashMap<>();
+        ResponseEntity<Map<String, Object>> responseEntity = null;
         Sort sort = Sort.by("nombre");
 
-        if (page != null && size != null) {
-            Pageable pageable = PageRequest.of(page, size, sort);
-            Page<Empleado> empleadoPage = empleadoService.findAll(pageable);
-            empleados = empleadoPage.getContent();
-            responseAsMap.put("empleados", empleados);
-            responseAsMap.put("totalElementos", empleadoPage.getTotalElements());
-            responseAsMap.put("totalPaginas", empleadoPage.getTotalPages());
-            responseAsMap.put("paginaActual", empleadoPage.getNumber());
-        } else {
-            empleados = empleadoService.findAll(sort);
-            responseAsMap.put("empleados", empleados);
-            responseAsMap.put("totalElementos", empleados.size());
+        try {
+            if (page != null && size != null) {
+                Pageable pageable = PageRequest.of(page, size, sort);
+                Page<Empleado> empleadoPage = empleadoService.findAll(pageable);
+                empleados = empleadoPage.getContent();
+                responseAsMap.put("empleados", empleados);
+                responseAsMap.put("totalElementos", empleadoPage.getTotalElements());
+                responseAsMap.put("totalPaginas", empleadoPage.getTotalPages());
+                responseAsMap.put("paginaActual", empleadoPage.getNumber());
+            } else {
+                empleados = empleadoService.findAll(sort);
+                responseAsMap.put("empleados", empleados);
+                responseAsMap.put("totalElementos", empleados.size());
+            }
+
+            responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.OK);
+
+        } catch (DataAccessException e) {
+            responseAsMap.put("mensaje", "Error al recuperar los empleados. La causa más probable es: "
+                    + e.getMostSpecificCause().getMessage());
+            responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return new ResponseEntity<>(responseAsMap, HttpStatus.OK);
+        return responseEntity;
     }
 
     @GetMapping("/{id}")
