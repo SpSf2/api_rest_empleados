@@ -1,5 +1,6 @@
 package com.example.controllers;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,14 +18,18 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.entities.Empleado;
+import com.example.models.FileUploadResponse;
 import com.example.services.EmpleadoService;
+import com.example.utilities.FileUploadUtil;
 
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -34,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 public class EmpleadoController {
 
     private final EmpleadoService empleadoService;
+    private final FileUploadUtil fileUploadUtil;
 
    @GetMapping
     public ResponseEntity<Map<String, Object>> dameEmpleados(
@@ -100,10 +106,12 @@ public class EmpleadoController {
         return responseEntity;
     }
 
-    @PostMapping
+    @PostMapping(consumes = "multipart/form-data")
+    @Transactional
     public ResponseEntity<Map<String, Object>> saveEmpleado(
-            @Valid @RequestBody Empleado empleado,
-            BindingResult result) {
+            @Valid @RequestPart Empleado empleado,
+            BindingResult result, @RequestPart(name = "file", required = false)
+            MultipartFile imagenDelEmpleado) {
 
         List<String> mensajesDeError = new ArrayList<>();
         Map<String, Object> responseAsMap = new HashMap<>();
@@ -119,6 +127,33 @@ public class EmpleadoController {
             responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.BAD_REQUEST);
             return responseEntity;
         }
+        /**Antes vamos a comprobar si hemos recibido imagen del empleado para guardarla
+         * en el system files 
+         */
+        if (imagenDelEmpleado != null && !imagenDelEmpleado.isEmpty()) {
+            try {
+                String fileCode = fileUploadUtil.saveFile(
+                        imagenDelEmpleado.getOriginalFilename(),
+                        imagenDelEmpleado);
+
+                empleado.setImagen(fileCode + "-" + imagenDelEmpleado.getOriginalFilename());
+
+                FileUploadResponse fileUploadResponse = new FileUploadResponse(
+                        fileCode + "-" + imagenDelEmpleado.getOriginalFilename(),
+                        "/empleados/fileDownload/" + fileCode,
+                        imagenDelEmpleado.getSize()
+                );
+
+                responseAsMap.put("informacion de la imagen del empleado", fileUploadResponse);
+
+            } catch (IOException e) {
+                responseAsMap.put("mensaje", "Error al guardar la imagen del empleado y la causa más probable es: "
+                        + e.getMessage());
+                return new ResponseEntity<>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+
+            
 
         try {
             Empleado empleadoPersistido = empleadoService.save(empleado);

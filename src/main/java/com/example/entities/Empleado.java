@@ -83,4 +83,6 @@ public class Empleado implements Serializable {
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "empleado")
     @JsonIgnoreProperties({"empleado"})
     private List<Correo> correos;
+
+    private String imagen; // Campo para almacenar la ruta de la foto del empleado
 }
