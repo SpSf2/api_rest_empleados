@@ -8,6 +8,7 @@ import java.util.List;
 import com.example.models.Genero;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -76,13 +77,13 @@ public class Empleado implements Serializable {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "empleados"})
     private Departamento departamento;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "empleado")
-    @JsonIgnoreProperties({"empleado"})
-    private List<Telefono> telefonos;
-
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "empleado")
-    @JsonIgnoreProperties({"empleado"})
+    @OneToMany(mappedBy = "empleado", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("empleado")
     private List<Correo> correos;
+
+    @OneToMany(mappedBy = "empleado", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("empleado")
+    private List<Telefono> telefonos;
 
     private String imagen; // Campo para almacenar la ruta de la foto del empleado
 }
